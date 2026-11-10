@@ -659,15 +659,7 @@ class AppearanceTab: NSObject {
     }
 
     static func addProBadgesToStyleButtons(_ stackView: NSStackView) {
-        for (index, view) in stackView.arrangedSubviews.enumerated() {
-            guard index > 0, let buttonView = view as? ImageTextButtonView else { continue }
-            let badge = ProBadgeView()
-            buttonView.addSubview(badge)
-            NSLayoutConstraint.activate([
-                badge.leadingAnchor.constraint(equalTo: buttonView.label.trailingAnchor, constant: 4),
-                badge.centerYAnchor.constraint(equalTo: buttonView.label.centerYAnchor, constant: 1),
-            ])
-        }
+        // Every style is unlocked, so the style buttons carry no badge.
     }
 
     /// Indices of `AppearanceStylePreference.allCases` that are Pro-only (everything but `.thumbnails`).

@@ -21,14 +21,11 @@ class AboutTab {
         appIcon.translatesAutoresizingMaskIntoConstraints = false
         appInfo.spacing = GridView.interPadding
         appInfo.alignment = .centerY
-        let supportProject = makeSupportProjectButton()
-        let rows = [[appInfo], [supportProject]]
+        let rows = [[appInfo]]
         let grid = GridView(rows, 0)
         if centerHero {
             grid.cell(atColumnIndex: 0, rowIndex: 0).xPlacement = .center
         }
-        let supportProjectCell = grid.cell(atColumnIndex: 0, rowIndex: showFeedbackButton ? 2 : 1)
-        supportProjectCell.xPlacement = .center
         if fitToContent {
             grid.fit()
         }

@@ -16,12 +16,14 @@ class LicenseManager {
 
     static let shared: LicenseManager = {
         let keychain = SystemKeychain(service: keychainService)
-        return LicenseManager(
+        let manager = LicenseManager(
             clock: SystemClock(),
             keychain: keychain,
             api: RemoteLicenseClient(baseUrl: Endpoints.licenseApiBaseUrl, keychain: keychain),
             defaults: UserDefaults(suiteName: defaultsSuiteName)!
         )
+        manager.unlocksEverything = true
+        return manager
     }()
 
     static let trialDuration = 14
@@ -41,6 +43,9 @@ class LicenseManager {
     let keychain: Keychain
     let api: LicenseAPI
     let defaults: UserDefaults
+    /// When true, every Pro feature is permanently unlocked: no trial, no license key, no server checks.
+    /// Only the shared instance sets it, so tests driving injected instances still exercise the trial logic.
+    var unlocksEverything = false
 
     /// Called whenever `state` changes (including the initial `initialize()` assignment).
     /// Production wires this up in App.swift to refresh Menubar, sync Sparkle cookie, and notify ProTransitionManager.
@@ -82,6 +87,7 @@ class LicenseManager {
         #if DEBUG
         if hasMockedLicense { return mockedVariant.map(Self.lifetimeVariants.contains) ?? false }
         #endif
+        if unlocksEverything { return true }
         guard let variant = keychain.value(account: Self.keychainVariantAccount) else { return false }
         return Self.lifetimeVariants.contains(variant)
     }
@@ -256,6 +262,7 @@ class LicenseManager {
         #if DEBUG
         if hasMockedLicense { return mockedTrialStartDate.map(trialState) ?? state }
         #endif
+        if unlocksEverything { return .pro }
         if keychain.value(account: Self.keychainKeyAccount) != nil {
             let lastValidationResult = defaults.bool(forKey: "lastValidationResult")
             guard lastValidationResult else { return .trialExpired }
@@ -283,6 +290,7 @@ class LicenseManager {
     }
 
     func scheduleAsyncRevalidationIfNeeded() {
+        guard !unlocksEverything else { return }
         let lastValidation = defaults.double(forKey: "lastValidation")
         let elapsed = clock.now.timeIntervalSince1970 - lastValidation
         guard elapsed >= Self.revalidationInterval else { return }

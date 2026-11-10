@@ -401,7 +401,6 @@ final class AppearancePane {
         AppearanceTab.labelTheme,
         AppearanceTab.labelShortcutStyle,
         AppearanceTab.labelPreviewSelectedWindow,
-        ProBadgeView.proLabel,
     ] + AppearanceStylePreference.allCases.map { $0.localizedString }
       + AppearanceSizePreference.allCases.map { $0.localizedString }
       + AppearanceThemePreference.allCases.map { $0.localizedString }

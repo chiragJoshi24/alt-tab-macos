@@ -55,25 +55,6 @@ final class SearchModeResolverTests: XCTestCase {
         XCTAssertEqual(SearchModeResolver.disable(mode: .off), .noOp)
     }
 
-    // MARK: - E. Escape depends on how search was entered
-
-    func testEscapeEditingToggledMidSessionExitsSearch() {
-        XCTAssertEqual(SearchModeResolver.escape(mode: .editing, entry: .toggledMidSession), .exitSearch)
-    }
-
-    func testEscapeEditingStartedInSearchClosesSwitcher() {
-        // searchOnRelease: search is the session, so Escape closes the whole switcher.
-        XCTAssertEqual(SearchModeResolver.escape(mode: .editing, entry: .startedInSearch), .closeSwitcher)
-    }
-
-    func testEscapeOffToggledMidSessionClosesSwitcher() {
-        XCTAssertEqual(SearchModeResolver.escape(mode: .off, entry: .toggledMidSession), .closeSwitcher)
-    }
-
-    func testEscapeOffStartedInSearchClosesSwitcher() {
-        XCTAssertEqual(SearchModeResolver.escape(mode: .off, entry: .startedInSearch), .closeSwitcher)
-    }
-
     // MARK: - F. Key routing: navigation & tab
 
     func testKeyLeftArrowCyclesLeft() {

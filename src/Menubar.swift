@@ -43,11 +43,6 @@ class Menubar {
         addMenuItem(String(format: NSLocalizedString("About %@", comment: "Menubar option. %@ is AltTab"), App.name), #selector(App.showAboutWindow), "", "info.circle", nil, App.self)
         addMenuItem(NSLocalizedString("Debug tools", comment: "Menubar option"), #selector(App.showDebugWindow), "", "scope", nil, App.self)
         addMenuItem(NSLocalizedString("Send feedback", comment: "Menubar option") + "…", #selector(App.showFeedbackPanel), "", "text.bubble", nil, App.self)
-        upgradeToProMenuItem = addMenuItem(NSLocalizedString("Get Pro", comment: "Menubar option"), App.upgradeToProAction, "", "star.fill", nil, App.self)
-        upgradeToProMenuItem.view = UpgradeMenuItemView()
-        myAccountMenuItem = addMenuItem(NSLocalizedString("My Account", comment: ""), App.openAccountAction, "", "person.crop.circle", nil, App.self)
-        supportProjectMenuItem = addMenuItem(NSLocalizedString("Support this project", comment: "Menubar option"), App.supportProjectAction, "", "heart.fill", .red, App.self)
-        refreshLicenseMenuItems()
         menu.addItem(NSMenuItem.separator())
         addMenuItem(String(format: NSLocalizedString("Quit %@", comment: "%@ is AltTab"), App.name), #selector(NSApplication.terminate(_:)), "q", nil) // "xmark.rectangle" is not necessary; macos automatically recognizes Quit
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -81,6 +76,7 @@ class Menubar {
     }
     #endif
 
+    /// The licensing menu items are never added (every feature is unlocked), so this always returns here.
     static func refreshLicenseMenuItems() {
         guard upgradeToProMenuItem != nil else { return }
         let state = LicenseManager.shared.state
@@ -96,7 +92,7 @@ class Menubar {
         case .pro:
             toggleUpgradeMenuItem(false)
             supportProjectMenuItem.isHidden = true
-            myAccountMenuItem.isHidden = false
+            myAccountMenuItem.isHidden = LicenseManager.shared.customerEmail == nil
         case .proExpired:
             toggleUpgradeMenuItem(true)
             supportProjectMenuItem.isHidden = false

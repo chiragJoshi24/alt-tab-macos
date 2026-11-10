@@ -16,12 +16,6 @@ enum SearchMode {
     case editing
 }
 
-/// How search was entered this session — decides what Escape does.
-enum SearchEntryStyle {
-    case startedInSearch    // session began in search (the `.searchOnRelease` shortcut style)
-    case toggledMidSession  // search turned on via the search shortcut during a normal session
-}
-
 /// Kernel-local direction (decoupled from the app-only `Direction` enum, which `TilesView` maps to).
 enum CycleDirection: Equatable {
     case left, right, up, down
@@ -38,8 +32,6 @@ enum SearchModeDecision: Equatable {
     case proGateBlocked    // the Pro attempt was denied
     case placeCaretOnly    // already editing: just re-place the caret
 }
-
-enum SearchEscapeDecision: Equatable { case exitSearch, closeSwitcher }
 
 enum SearchKeyDecision: Equatable {
     case cycleSelection(CycleDirection)
@@ -67,12 +59,6 @@ enum SearchModeResolver {
 
     static func disable(mode: SearchMode) -> SearchModeDecision {
         mode == .off ? .noOp : .exitToOff
-    }
-
-    /// Escape exits search only when it was toggled on mid-session. If the session *started* in
-    /// search (`.searchOnRelease`), or search is off, Escape closes the whole switcher.
-    static func escape(mode: SearchMode, entry: SearchEntryStyle) -> SearchEscapeDecision {
-        (mode != .off && entry == .toggledMidSession) ? .exitSearch : .closeSwitcher
     }
 
     /// Key routing while the search field is being edited. IME/menu come first so composing

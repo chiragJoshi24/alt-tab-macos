@@ -35,7 +35,7 @@ class CursorEvents {
     }
 
     static func observe() {
-        let eventMask = [CGEventType.leftMouseDown, CGEventType.leftMouseUp, CGEventType.rightMouseDown, CGEventType.rightMouseUp, CGEventType.otherMouseDown, CGEventType.otherMouseUp, CGEventType.mouseMoved].reduce(CGEventMask(0), { $0 | (1 << $1.rawValue) })
+        let eventMask = [CGEventType.leftMouseDown, CGEventType.leftMouseUp, CGEventType.leftMouseDragged, CGEventType.rightMouseDown, CGEventType.rightMouseUp, CGEventType.otherMouseDown, CGEventType.otherMouseUp, CGEventType.mouseMoved].reduce(CGEventMask(0), { $0 | (1 << $1.rawValue) })
         eventTap = CGEvent.createTapOrRestart(
             tap: .cgSessionEventTap,
             options: .defaultTap,
@@ -52,6 +52,7 @@ class CursorEvents {
         switch type {
             case .leftMouseDown: return handleLeftMouseDown(cgEvent)
             case .leftMouseUp: return handleLeftMouseUp(cgEvent)
+            case .leftMouseDragged: return handleLeftMouseDragged(cgEvent)
             case .rightMouseDown: return handleRightMouseDown(cgEvent)
             case .rightMouseUp: return handleRightMouseUp(cgEvent)
             case .otherMouseDown: return handleOtherMouseDown(cgEvent)
@@ -78,13 +79,24 @@ class CursorEvents {
         }
         mouseDownInsideSearchField = false
         guard isPointerInsideUi() else { return nil }
-        mouseDownTarget = (findButtonUnderPointer() ?? findTileViewUnderPointer()) as AnyObject?
+        let button = findButtonUnderPointer()
+        mouseDownTarget = (button ?? findTileViewUnderPointer()) as AnyObject?
+        if button == nil { TilesPanel.shared.beginDrag(at: cgEvent.location) }
+        return nil
+    }
+
+    private static func handleLeftMouseDragged(_ cgEvent: CGEvent) -> Unmanaged<CGEvent>? {
+        guard TilesPanel.shared.continueDrag(to: cgEvent.location) else { return Unmanaged.passUnretained(cgEvent) }
         return nil
     }
 
     private static func handleLeftMouseUp(_ cgEvent: CGEvent) -> Unmanaged<CGEvent>? {
         let sawDown = sawLeftMouseDown
         sawLeftMouseDown = false
+        if TilesPanel.shared.endDrag() {
+            mouseDownTarget = nil
+            return nil
+        }
         if searchHintClick.end(inside: SearchDiscoveryHint.shared.containsMouseLocation) {
             mouseDownTarget = nil
             return Unmanaged.passUnretained(cgEvent)

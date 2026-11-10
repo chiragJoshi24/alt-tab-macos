@@ -56,6 +56,11 @@ class KeyboardEvents {
     private static let escapeEventHandler: CGEventTapCallBack = { _, type, cgEvent, _ in
         switch type {
         case .keyDown:
+            // Spotlight's own shortcut goes through untouched; the switcher just steps aside for it.
+            if SwitcherSession.isActive && SpotlightExclusion.isSpotlightHotkey(cgEvent) {
+                DispatchQueue.main.async { SpotlightExclusion.spotlightHotkeyPressed() }
+                return Unmanaged.passUnretained(cgEvent)
+            }
             // Issue #5585. Esc only — absorb when AltTab is using it and a shortcut binds it. cghid is
             // the earliest tap point; absorbing here preempts macOS 26 Game Overlay's hook on `⌘⎋`.
             if cgEvent.getIntegerValueField(.keyboardEventKeycode) != Int64(kVK_Escape) ||
@@ -155,7 +160,7 @@ class KeyboardEvents {
     /// the tap exists (e.g. unit tests that set `SwitcherSession.current` directly).
     static func updateEscapeAbsorptionTap() {
         guard let escapeEventTap else { return }
-        let shouldEnable = anyShortcutUsesEscape && SwitcherSession.isActive
+        let shouldEnable = (anyShortcutUsesEscape || SpotlightExclusion.hotkey != nil) && SwitcherSession.isActive
         if CGEvent.tapIsEnabled(tap: escapeEventTap) != shouldEnable {
             CGEvent.tapEnable(tap: escapeEventTap, enable: shouldEnable)
             // Whether Esc can be heard while the switcher is up is the difference between "press Esc" and

@@ -15,7 +15,7 @@ the Edit menu, call `App.cycleSelection`).
 - **`.off`** — no search field interaction; the switcher behaves normally.
 - **`.editing`** — the search field is the first responder and editable; typing filters the list.
 
-### How you enter search (this decides Escape's behavior)
+### How you enter search
 
 - **Started in search** — the session began in search because the triggering shortcut uses the
   `.searchOnRelease` style. Search *is* the session.
@@ -23,9 +23,8 @@ the Edit menu, call `App.cycleSelection`).
 
 ## Behavior & edge cases
 
-- **Escape is contextual** (the headline interaction): if search was *toggled mid-session*, Escape
-  exits search back to the normal switcher (a second Escape then closes it). If the session *started
-  in search*, Escape closes the whole switcher immediately — there's no "normal switcher" to fall back to.
+- **Escape always closes the switcher**, whether search was toggled mid-session or the session started in
+  search. The cancel shortcut doesn't go through this resolver (`ShortcutAction` "cancelShortcut").
 - **Pro gating timing**: `ProFeature.searchInSwitcher.attemptUse()` has side effects (consume the free
   pass, surface the upgrade UI), so the *caller* evaluates it at the real attempt moment and passes a
   `Bool` in. The gate is checked **before** the state branches, so a denied attempt never mutates mode
@@ -82,12 +81,6 @@ Mirrors `SearchModeResolverTests.swift` 1:1.
 ### D. Disable
 - **testDisableFromEditingExitsToOff** — `.editing` → `.exitToOff`.
 - **testDisableWhenAlreadyOffIsNoOp** — `.off` → `.noOp`.
-
-### E. Escape depends on how search was entered
-- **testEscapeEditingToggledMidSessionExitsSearch** — editing + mid-session → `.exitSearch`.
-- **testEscapeEditingStartedInSearchClosesSwitcher** — editing + started-in-search → `.closeSwitcher`.
-- **testEscapeOffToggledMidSessionClosesSwitcher** — off → `.closeSwitcher`.
-- **testEscapeOffStartedInSearchClosesSwitcher** — off → `.closeSwitcher`.
 
 ### F. Key routing: navigation & tab
 - **testKeyLeftArrowCyclesLeft** / **testKeyRightArrowCyclesRight** / **testKeyUpArrowCyclesUp** / **testKeyDownArrowCyclesDown** — arrows → `cycleSelection(dir)`.

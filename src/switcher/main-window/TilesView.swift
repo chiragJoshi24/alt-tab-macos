@@ -14,7 +14,7 @@ class TilesView {
     static var contentView: EffectView!
     static var currentEffectViewKind: EffectViewKind?
     private static var cachedEffectViews: [EffectViewKind: EffectView] = [:]
-    static var searchField = NSSearchField(frame: NSRect(x: 0, y: 0, width: 320, height: 30))
+    static var searchField: NSSearchField = SpotlightSearchField(frame: NSRect(x: 0, y: 0, width: 320, height: SpotlightSearchField.height))
     static var noWindowLabel = NSTextField(labelWithString: NSLocalizedString("No Window", comment: ""))
     private(set) static var searchMode: SearchMode = .off
     static var rows = [[TileView]]()
@@ -190,7 +190,6 @@ class TilesView {
     }
 
     private static func configureSearchField() {
-        searchField.applySearchStyle()
         searchField.usesSingleLineMode = true
         searchField.target = Self.self
         searchField.action = #selector(Self.searchFieldChanged(_:))
@@ -574,9 +573,9 @@ class TilesView {
         let searchBottomPadding = CGFloat(10)
         let searchReservedHeight = searchMode == .off ? 0 : searchBarHeight + searchBottomPadding
         let heightMax = max(0, TilesPanel.maxThumbnailsHeight() - searchReservedHeight)
-        let minSearchWidth = min(widthMax, 320)
+        let minSearchWidth = min(widthMax, 480)
         let minWidth = min(widthMax, 320)
-        TilesView.thumbnailsWidth = max(min(maxX, widthMax), searchMode == .off ? (maxX == 0 ? minWidth : 0) : minWidth)
+        TilesView.thumbnailsWidth = max(min(maxX, widthMax), searchMode == .off ? (maxX == 0 ? minWidth : 0) : minSearchWidth)
         TilesView.thumbnailsHeight = min(maxY, heightMax)
         let appIconsBottomViewportPadding = appIconsBottomViewportPadding(maxY, heightMax, labelHeight)
         let frameWidth = TilesView.thumbnailsWidth + Appearance.windowPadding * 2
@@ -601,7 +600,7 @@ class TilesView {
             if searchField.superview !== host {
                 host.addSubview(searchField)
             }
-            let searchWidth = minSearchWidth
+            let searchWidth = TilesView.thumbnailsWidth
             searchField.frame.size = NSSize(width: searchWidth, height: searchBarHeight)
             let searchX = originX + (TilesView.thumbnailsWidth - searchWidth) * 0.5
             searchField.frame.origin = CGPoint(x: searchX, y: frameHeight - Appearance.windowPadding - searchBarHeight)

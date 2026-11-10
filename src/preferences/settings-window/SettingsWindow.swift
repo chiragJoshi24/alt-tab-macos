@@ -415,7 +415,6 @@ class SettingsWindow: NSWindow {
         let logo = setupLogo(sidebarContainer)
         setupSearchField(sidebarContainer, below: logo)
         setupQuitButton(sidebarContainer)
-        setupUpgradeButton(sidebarContainer)
         setupSidebarTable(sidebarContainer)
         // Match macOS System Settings: Tab cycles between the search field and the sidebar
         // table only. The nextValidKeyView overrides on these two subclasses keep AppKit's
@@ -533,7 +532,7 @@ class SettingsWindow: NSWindow {
             // too far in.
             sidebarScrollView.leadingAnchor.constraint(equalTo: parent.leadingAnchor),
             sidebarScrollView.trailingAnchor.constraint(equalTo: parent.trailingAnchor),
-            sidebarScrollView.bottomAnchor.constraint(equalTo: upgradeButton.topAnchor, constant: -10),
+            sidebarScrollView.bottomAnchor.constraint(equalTo: quitButton.topAnchor, constant: -20),
         ])
     }
 
@@ -1126,35 +1125,7 @@ class SettingsWindow: NSWindow {
     }
 
     func showUpgradeView() {
-        guard !isShowingUpgradeView else { return }
-        isShowingUpgradeView = true
-        sidebarTableView.deselectAll(nil)
-        selectedSectionId = nil
-        sectionsStackBottomConstraint.isActive = false
-        sectionsStack.isHidden = true
-        if upgradeContentView == nil {
-            let view = UpgradeTab.initTab()
-            view.translatesAutoresizingMaskIntoConstraints = false
-            sectionsDocumentView.addSubview(view)
-            let bottomConstraint = view.bottomAnchor.constraint(equalTo: sectionsDocumentView.bottomAnchor, constant: -Self.contentBottomPadding)
-            NSLayoutConstraint.activate([
-                view.topAnchor.constraint(equalTo: sectionsDocumentView.topAnchor, constant: Self.contentTopPadding + Self.topSectionTitlePadding),
-                view.leadingAnchor.constraint(equalTo: sectionsDocumentView.leadingAnchor, constant: Self.contentHorizontalPadding + Self.sectionContentHorizontalMargin),
-                view.trailingAnchor.constraint(lessThanOrEqualTo: sectionsDocumentView.trailingAnchor, constant: -(Self.contentTrailingPadding + Self.sectionContentHorizontalMargin)),
-                bottomConstraint,
-            ])
-            upgradeViewBottomConstraint = bottomConstraint
-            upgradeContentView = view
-        } else {
-            UpgradeTab.refreshStatus()
-        }
-        upgradeViewBottomConstraint?.isActive = true
-        upgradeContentView?.isHidden = false
-        isProgrammaticScrollInProgress = true
-        defer { isProgrammaticScrollInProgress = false }
-        rightScrollView.contentView.scroll(to: .zero)
-        rightScrollView.reflectScrolledClipView(rightScrollView.contentView)
-        lastContentScrollY = 0
+        // Every feature is unlocked, so there is no upgrade screen to show.
     }
 
     private func hideUpgradeView() {

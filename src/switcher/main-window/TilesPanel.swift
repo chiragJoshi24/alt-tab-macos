@@ -22,6 +22,12 @@ class TilesPanel: NSPanel {
     private var highWaterHeight: CGFloat = 0
     private var showGeneration: UInt = 0
     private var afterOrderOut: (() -> Void)?
+    private static let centerOffsetKey = "tilesPanelCenterOffset"
+    /// Where the user dragged the panel, as its center's offset from the preferred screen's center.
+    /// Stored as an offset rather than an origin so the panel stays put as its size changes between summons.
+    private static var centerOffset = loadCenterOffset()
+    private var panelDrag: (startMouse: CGPoint, startOrigin: NSPoint, moved: Bool)?
+    private static let dragThreshold: CGFloat = 4
 
     convenience init() {
         self.init(contentRect: .zero, styleMask: .nonactivatingPanel, backing: .buffered, defer: false)
@@ -65,17 +71,73 @@ class TilesPanel: NSPanel {
     private func repositionOrFreeze() {
         let size = frame.size
         guard TilesView.isSearchModeOn else {
-            NSScreen.preferred.repositionPanel(self)
+            reposition()
             resetFrozenPosition()
             return
         }
         if size.height > highWaterHeight {
-            NSScreen.preferred.repositionPanel(self)
+            reposition()
             highWaterHeight = size.height
             frozenTopCenter = NSPoint(x: frame.midX, y: frame.maxY)
         } else if let topCenter = frozenTopCenter {
             setFrameOrigin(NSPoint(x: topCenter.x - size.width * 0.5, y: topCenter.y - size.height))
         }
+    }
+
+    private func reposition() {
+        let screen = NSScreen.preferred.visibleFrame
+        let size = frame.size
+        let x = screen.midX + Self.centerOffset.dx - size.width * 0.5
+        let y = screen.midY + Self.centerOffset.dy - size.height * 0.5
+        setFrameOrigin(NSPoint(x: Self.clamp(x, screen.minX, screen.maxX - size.width),
+            y: Self.clamp(y, screen.minY, screen.maxY - size.height)))
+    }
+
+    /// Keeps the panel on screen; a panel larger than the screen sticks to its min edge.
+    private static func clamp(_ value: CGFloat, _ low: CGFloat, _ high: CGFloat) -> CGFloat {
+        max(min(value, high), low)
+    }
+
+    /// `mouse` is a CGEvent location: global, top-left origin, y pointing down.
+    func beginDrag(at mouse: CGPoint) {
+        panelDrag = (mouse, frame.origin, false)
+    }
+
+    /// Returns true once the gesture has moved the panel, so the caller swallows it instead of treating it as a click.
+    func continueDrag(to mouse: CGPoint) -> Bool {
+        guard var current = panelDrag else { return false }
+        let delta = CGVector(dx: mouse.x - current.startMouse.x, dy: current.startMouse.y - mouse.y)
+        guard current.moved || hypot(delta.dx, delta.dy) > Self.dragThreshold else { return false }
+        current.moved = true
+        panelDrag = current
+        setFrameOrigin(NSPoint(x: current.startOrigin.x + delta.dx, y: current.startOrigin.y + delta.dy))
+        updateCenterOffsetFromFrame()
+        return true
+    }
+
+    /// Returns true if the gesture moved the panel.
+    func endDrag() -> Bool {
+        guard let current = panelDrag else { return false }
+        panelDrag = nil
+        guard current.moved else { return false }
+        Self.saveCenterOffset()
+        return true
+    }
+
+    private func updateCenterOffsetFromFrame() {
+        let screen = NSScreen.preferred.visibleFrame
+        Self.centerOffset = CGVector(dx: frame.midX - screen.midX, dy: frame.midY - screen.midY)
+        guard frozenTopCenter != nil else { return }
+        frozenTopCenter = NSPoint(x: frame.midX, y: frame.maxY)
+    }
+
+    private static func loadCenterOffset() -> CGVector {
+        guard let values = UserDefaults.standard.array(forKey: centerOffsetKey) as? [Double], values.count == 2 else { return .zero }
+        return CGVector(dx: values[0], dy: values[1])
+    }
+
+    private static func saveCenterOffset() {
+        UserDefaults.standard.set([Double(centerOffset.dx), Double(centerOffset.dy)], forKey: centerOffsetKey)
     }
 
     func resetFrozenPosition() {
@@ -149,6 +211,8 @@ class TilesPanel: NSPanel {
 
     private func beginOrderOut() {
         MainThreadStall.step()
+        // The switcher can close mid-drag (modifier released first); keep where the panel was dragged to.
+        _ = endDrag()
         SearchDiscoveryHint.shared.cancel()
         TilesView.clearNeedsLayout()
     }
@@ -173,6 +237,7 @@ class TilesPanel: NSPanel {
         CursorEvents.toggle(true)
         DispatchQueue.main.async { TilesView.scrollView.flashScrollers() }
         SearchDiscoveryHint.shared.switcherShown()
+        SpotlightExclusion.switcherShown()
     }
 
     static func maxThumbnailsWidth(_ screen: NSScreen = NSScreen.preferred) -> CGFloat {
@@ -222,10 +287,16 @@ extension TilesPanel: NSWindowDelegate {
         // other windows can steal key focus from alt-tab; we make sure that if it's active, if keeps key focus
         // dispatching to the main queue is necessary to introduce a delay in scheduling the makeKey; otherwise it is ignored
         DispatchQueue.main.async {
-            if SwitcherSession.isActive {
-                TilesPanel.shared.makeKeyAndOrderFront(nil)
-            }
             MainMenu.toggle(true)
+            guard SwitcherSession.isActive else { return }
+            SpotlightExclusion.checkIfSpotlightTookFocus { spotlightTookFocus in
+                guard SwitcherSession.isActive else { return }
+                if spotlightTookFocus {
+                    App.hideUi()
+                } else {
+                    TilesPanel.shared.makeKeyAndOrderFront(nil)
+                }
+            }
         }
     }
 

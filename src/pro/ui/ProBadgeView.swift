@@ -208,65 +208,9 @@ class ProBadgeView: NSView {
     /// Only valid for the LAST segment — the badge anchors to the control's trailing edge.
     @discardableResult
     static func attach(to segmentedControl: NSSegmentedControl, segmentIndex: Int, label: String, symbol: Symbols) -> SegmentOverlay {
-        let selected = segmentedControl.selectedSegment == segmentIndex
-        segmentedControl.setLabel("", forSegment: segmentIndex)
-        segmentedControl.setImage(nil, forSegment: segmentIndex)
-        segmentedControl.setToolTip(label, forSegment: segmentIndex)
-        let segmentLeading = (0..<segmentIndex).reduce(CGFloat(0)) { $0 + segmentedControl.width(forSegment: $1) }
-        let colorProvider = segmentColorProvider(for: segmentedControl, segmentIndex: segmentIndex)
-        let iconView = DynamicColorImageView()
-        iconView.colorProvider = colorProvider
-        iconView.translatesAutoresizingMaskIntoConstraints = false
-        // Rendered from our bundled font subset; `isTemplate = true` (set by NSImage.fromSymbol)
-        // makes AppKit apply `contentTintColor`. Mirrors the sibling segments' native rendering.
-        iconView.image = NSImage.fromSymbol(symbol, pointSize: SegmentSymbol.pointSize, margin: SegmentSymbol.margin)
-        iconView.contentTintColor = colorProvider()
-        iconView.setContentHuggingPriority(.required, for: .horizontal)
-        iconView.setContentCompressionResistancePriority(.required, for: .horizontal)
-        let textLabel = DynamicColorTextField(labelWithString: label)
-        textLabel.colorProvider = colorProvider
-        textLabel.translatesAutoresizingMaskIntoConstraints = false
-        textLabel.font = segmentedControl.font
-        textLabel.textColor = colorProvider()
-        textLabel.lineBreakMode = .byTruncatingTail
-        textLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        let badge = ProBadgeView()
-        badge.setSelected(selected)
-        segmentedControl.addSubview(iconView)
-        segmentedControl.addSubview(textLabel)
-        segmentedControl.addSubview(badge)
-        let segmentWidth = segmentedControl.width(forSegment: segmentIndex)
-        let glyphWidth = max(0, iconView.fittingSize.width - 2 * SegmentSymbol.margin)
-        let textWidth = textLabel.fittingSize.width
-        let badgeWidth = badge.fittingSize.width
-        let availableWidth = segmentWidth - badgeWidth - 4 - 4 - 4 // leading pad, gap, trailing pad
-        let spacing = SegmentSymbol.spacing(glyphWidth: glyphWidth, labelWidth: textWidth, availableWidth: availableWidth)
-        let symbolWidth = spacing.before + glyphWidth + spacing.after + SegmentSymbol.appKitGap
-        let contentWidth = symbolWidth + textWidth
-        // Position content as close to centered as possible without overlapping the Pro badge:
-        // 1) Full-segment center if the centered content clears the badge.
-        // 2) Otherwise shift left only as much as needed to keep the content's right edge clear.
-        // 3) If even the leftmost position overflows, stay at the left pad and let the trailing
-        //    constraint truncate.
-        let maxContentRightEdge = segmentWidth - badgeWidth - 4
-        let centerOffset = (segmentWidth - contentWidth) / 2
-        let leadingOffset: CGFloat
-        if centerOffset + contentWidth <= maxContentRightEdge {
-            leadingOffset = segmentLeading + centerOffset
-        } else {
-            leadingOffset = segmentLeading + max(maxContentRightEdge - contentWidth, 8)
-        }
-        NSLayoutConstraint.activate([
-            iconView.leadingAnchor.constraint(equalTo: segmentedControl.leadingAnchor, constant: leadingOffset + spacing.before - SegmentSymbol.margin),
-            iconView.centerYAnchor.constraint(equalTo: segmentedControl.centerYAnchor),
-            textLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: spacing.after - SegmentSymbol.margin + SegmentSymbol.appKitGap),
-            textLabel.centerYAnchor.constraint(equalTo: segmentedControl.centerYAnchor),
-            textLabel.trailingAnchor.constraint(lessThanOrEqualTo: badge.leadingAnchor),
-            textLabel.widthAnchor.constraint(lessThanOrEqualToConstant: availableWidth - symbolWidth),
-            badge.centerYAnchor.constraint(equalTo: segmentedControl.centerYAnchor),
-            badge.trailingAnchor.constraint(equalTo: segmentedControl.trailingAnchor, constant: -segmentTrailingPadding),
-        ])
-        return SegmentOverlay(badge: badge, icon: iconView, label: textLabel)
+        // Every feature is unlocked: the segment keeps AppKit's native label and icon, and the returned
+        // overlay's views are never added to the control.
+        SegmentOverlay(badge: ProBadgeView(), icon: DynamicColorImageView(), label: DynamicColorTextField(labelWithString: ""))
     }
 
     /// Sync the overlay's selection-dependent visuals to the segment's current selection. The
@@ -293,7 +237,6 @@ class ProBadgeView: NSView {
         // Register the "Pro" tag with the search index if a section build is in progress —
         // mirrors what the post-construction walk in `SettingsWindow.collectSearchContent` does
         // when it spots a `ProBadgeView`, just without needing the walk to find it after.
-        SettingsSearchIndex.registerString(ProBadgeView.proLabel)
         translatesAutoresizingMaskIntoConstraints = false
         wantsLayer = true
         layer?.cornerRadius = 4

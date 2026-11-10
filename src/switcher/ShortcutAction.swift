@@ -18,12 +18,8 @@ enum ShortcutActions {
         ShortcutAction(id: "vimCycleUp", perform: { App.cycleSelection(.up) }),
         ShortcutAction(id: "vimCycleDown", perform: { App.cycleSelection(.down) }),
         ShortcutAction(id: "cancelShortcut", perform: {
-            guard let session = SwitcherSession.current else { return }
-            let entry: SearchEntryStyle = Preferences.effectiveShortcutStyle(session.shortcutIndex) == .searchOnRelease ? .startedInSearch : .toggledMidSession
-            switch SearchModeResolver.escape(mode: TilesView.searchMode, entry: entry) {
-                case .exitSearch: TilesView.disableSearchMode()
-                case .closeSwitcher: App.hideUi()
-            }
+            guard SwitcherSession.isActive else { return }
+            App.hideUi()
         }),
         ShortcutAction(id: "closeWindowShortcut", perform: { onSelectedWindow(closesOneTab: true) { $0.close() } }),
         ShortcutAction(id: "minDeminWindowShortcut", perform: { onSelectedWindow { $0.minDemin() } }),
