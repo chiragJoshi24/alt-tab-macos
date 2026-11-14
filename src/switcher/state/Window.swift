@@ -265,6 +265,9 @@ class Window {
             if cgWindowId.flatMap({ SwitcherSession.current?.hasPreviewFrame($0) }) != true {
                 PreviewPanel.updateIfShowing(cgWindowId, screenshot, shownArea)
             }
+            if TilesView.orbit != nil, Windows.selectedWindow() === self {
+                TilesView.orbitView.showWindow(self)
+            }
         }
     }
 

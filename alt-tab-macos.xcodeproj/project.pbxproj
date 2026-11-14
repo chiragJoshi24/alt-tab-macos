@@ -93,6 +93,11 @@
 		5E6010B00000000000000002 /* TileGridLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E6010B00000000000000001 /* TileGridLayout.swift */; };
 		5E6010B00000000000000003 /* TileGridLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E6010B00000000000000001 /* TileGridLayout.swift */; };
 		5E6010B00000000000000102 /* TileGridLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E6010B00000000000000101 /* TileGridLayoutTests.swift */; };
+		5E6020B00000000000000002 /* OrbitLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E6020B00000000000000001 /* OrbitLayout.swift */; };
+		5E6020B00000000000000003 /* OrbitLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E6020B00000000000000001 /* OrbitLayout.swift */; };
+		5E6020B00000000000000102 /* OrbitLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E6020B00000000000000101 /* OrbitLayoutTests.swift */; };
+		5E6020B00000000000000302 /* OrbitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E6020B00000000000000301 /* OrbitView.swift */; };
+		5E6020B00000000000000402 /* OrbitCollapseWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E6020B00000000000000401 /* OrbitCollapseWindow.swift */; };
 		5E7115000000000000000002 /* TilePool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E7115000000000000000001 /* TilePool.swift */; };
 		5E7115000000000000000003 /* TilePool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E7115000000000000000001 /* TilePool.swift */; };
 		5E7115000000000000000102 /* TilePoolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E7115000000000000000101 /* TilePoolTests.swift */; };
@@ -562,6 +567,11 @@
 		5E6010A00000000000000101 /* WindowTitleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowTitleTests.swift; sourceTree = "<group>"; };
 		5E6010B00000000000000001 /* TileGridLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TileGridLayout.swift; sourceTree = "<group>"; };
 		5E6010B00000000000000101 /* TileGridLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TileGridLayoutTests.swift; sourceTree = "<group>"; };
+		5E6020B00000000000000001 /* OrbitLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbitLayout.swift; sourceTree = "<group>"; };
+		5E6020B00000000000000101 /* OrbitLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbitLayoutTests.swift; sourceTree = "<group>"; };
+		5E6020B00000000000000201 /* OrbitLayoutSpecs.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = OrbitLayoutSpecs.md; sourceTree = "<group>"; };
+		5E6020B00000000000000301 /* OrbitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbitView.swift; sourceTree = "<group>"; };
+		5E6020B00000000000000401 /* OrbitCollapseWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbitCollapseWindow.swift; sourceTree = "<group>"; };
 		5E7115000000000000000001 /* TilePool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TilePool.swift; sourceTree = "<group>"; };
 		5E7115000000000000000101 /* TilePoolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TilePoolTests.swift; sourceTree = "<group>"; };
 		5E7115000000000000000201 /* TilePoolSpecs.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = TilePoolSpecs.md; sourceTree = "<group>"; };
@@ -1700,6 +1710,11 @@
 				5E7117000000000000000001 /* SpotlightSearchField.swift */,
 				5E6010B00000000000000001 /* TileGridLayout.swift */,
 				5E6010B00000000000000101 /* TileGridLayoutTests.swift */,
+				5E6020B00000000000000001 /* OrbitLayout.swift */,
+				5E6020B00000000000000201 /* OrbitLayoutSpecs.md */,
+				5E6020B00000000000000101 /* OrbitLayoutTests.swift */,
+				5E6020B00000000000000301 /* OrbitView.swift */,
+				5E6020B00000000000000401 /* OrbitCollapseWindow.swift */,
 				5E7115000000000000000001 /* TilePool.swift */,
 				5E7115000000000000000201 /* TilePoolSpecs.md */,
 				5E7115000000000000000101 /* TilePoolTests.swift */,
@@ -2203,6 +2218,8 @@
 				5E6010A00000000000000102 /* WindowTitleTests.swift in Sources */,
 				5E6010B00000000000000003 /* TileGridLayout.swift in Sources */,
 				5E6010B00000000000000102 /* TileGridLayoutTests.swift in Sources */,
+				5E6020B00000000000000003 /* OrbitLayout.swift in Sources */,
+				5E6020B00000000000000102 /* OrbitLayoutTests.swift in Sources */,
 				5E7115000000000000000003 /* TilePool.swift in Sources */,
 				5E7115000000000000000102 /* TilePoolTests.swift in Sources */,
 				5E5EA12D0000000000000003 /* ShortcutModifierResolver.swift in Sources */,
@@ -2341,6 +2358,9 @@
 				5E5EA12F0000000000000002 /* SearchFieldEditing.swift in Sources */,
 				5E6010A00000000000000002 /* WindowTitle.swift in Sources */,
 				5E6010B00000000000000002 /* TileGridLayout.swift in Sources */,
+				5E6020B00000000000000002 /* OrbitLayout.swift in Sources */,
+				5E6020B00000000000000302 /* OrbitView.swift in Sources */,
+				5E6020B00000000000000402 /* OrbitCollapseWindow.swift in Sources */,
 				5E7115000000000000000002 /* TilePool.swift in Sources */,
 				5E5EA12D0000000000000002 /* ShortcutModifierResolver.swift in Sources */,
 				5F5849A900000000000000A2 /* BruteForceWindowMatch.swift in Sources */,

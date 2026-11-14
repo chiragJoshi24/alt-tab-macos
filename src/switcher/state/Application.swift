@@ -72,13 +72,34 @@ class Application: NSObject {
         let hints: [NSImageRep.HintKey: NSNumber] = [.interpolation: NSNumber(value: NSImageInterpolation.high.rawValue)]
         guard let cgImage = icon.cgImage(forProposedRect: &proposedRect, context: nil, hints: hints) else { return nil }
         // we have to crop this image; let's scale our intended padding, given the image size we got
-        let paddingScaled = padding * (CGFloat(cgImage.width) / sourceWidth)
+        let paddingScaled = min(padding * (CGFloat(cgImage.width) / sourceWidth), transparentMargin(cgImage))
         guard let image = cgImage.cropping(to: CGRect(x: paddingScaled, y: paddingScaled, width: CGFloat(cgImage.width) - paddingScaled * 2, height: CGFloat(cgImage.height) - paddingScaled * 2).integral),
               let context = CGContext(data: nil, width: Int(finalWidth), height: Int(finalWidth), bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedFirst.rawValue).union(.byteOrder32Little).rawValue) else { return nil }
         context.interpolationQuality = .high
         context.draw(image, in: CGRect(origin: .zero, size: NSSize(width: finalWidth, height: finalWidth)))
         guard let result = context.makeImage() else { return nil }
         return (result, cgImage.width)
+    }
+
+    /// How far in from its edges `image` stays see-through, in its own pixels. The fixed padding above fits
+    /// Apple's icon grid, where a rounded square sits inside an empty margin. A replacement icon the user
+    /// pasted in Finder usually fills its whole canvas instead, and trimming the fixed padding off it would
+    /// cut into the artwork, so the trim never goes past this. Measured on a 64px copy, which is plenty for a
+    /// margin, and counted as see-through below half opacity, so Apple's soft drop shadow stays trimmable.
+    private static func transparentMargin(_ image: CGImage) -> CGFloat {
+        let side = 64
+        guard let context = CGContext(data: nil, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side,
+                  space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.alphaOnly.rawValue),
+              let data = context.data else { return 0 }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
+        let alpha = data.bindMemory(to: UInt8.self, capacity: side * side)
+        var margin = side / 2
+        for y in 0..<side {
+            for x in 0..<side where alpha[y * side + x] >= 128 {
+                margin = min(margin, x, y, side - 1 - x, side - 1 - y)
+            }
+        }
+        return CGFloat(margin) * CGFloat(image.width) / CGFloat(side)
     }
 
     init(_ runningApplication: NSRunningApplication, pid: pid_t) {

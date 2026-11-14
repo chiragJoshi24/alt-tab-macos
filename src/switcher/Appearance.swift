@@ -66,7 +66,9 @@ class Appearance {
     }
 
     private static func applyConcreteSize(_ size: AppearanceSizePreference, _ isHorizontalScreen: Bool) {
-        if currentStyle == .appIcons {
+        if Preferences.usesOrbitLayout(SwitcherSession.activeShortcutIndex) {
+            orbitSize(size)
+        } else if currentStyle == .appIcons {
             appIconsSize(size)
         } else if currentStyle == .titles {
             titlesSize(size)
@@ -154,6 +156,18 @@ class Appearance {
                     windowCornerRadius = 75
                     cellCornerRadius = 45
                 }
+        }
+    }
+
+    /// App Icons tiles, sized to sit on a ring. No minimum tile width: `TileView.iconSize` would otherwise
+    /// grow the icon to a share of the screen width, which only makes sense for a row.
+    private static func orbitSize(_ size: AppearanceSizePreference) {
+        appIconsSize(size)
+        windowMinWidthInRow = 0
+        switch size {
+            case .small: iconSize = 40
+            case .medium: iconSize = 52
+            case .large, .auto: iconSize = 64
         }
     }
 

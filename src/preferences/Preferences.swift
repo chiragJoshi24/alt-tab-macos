@@ -23,7 +23,7 @@ class Preferences {
             "cursorFollowFocus": CursorFollowFocus.never.indexAsString,
             "hideColoredCircles": "false",
             "windowDisplayDelay": "100",
-            "appearanceStyle": AppearanceStylePreference.thumbnails.indexAsString,
+            "appearanceStyle": AppearanceStylePreference.orbit.indexAsString,
             "appearanceSize": AppearanceSizePreference.auto.indexAsString,
             "appearanceTheme": AppearanceThemePreference.system.indexAsString,
             "showOnScreen": ShowOnScreenPreference.active.indexAsString,
@@ -315,10 +315,28 @@ class Preferences {
         }
     }
 
+    /// The style the tiles render with. Orbit is a layout, not a tile look: its tiles are App Icons tiles,
+    /// and while searching it shows the Titles list, which reads better than a ring of filtered icons.
+    /// So every rendering decision keys off this, and only the layout asks `usesOrbitLayout`.
     static func effectiveAppearanceStyle(_ index: Int) -> AppearanceStylePreference {
+        let style = configuredAppearanceStyle(index)
+        guard style == .orbit else { return style }
+        return isSearchingWithShortcut(index) ? .titles : .appIcons
+    }
+
+    static func usesOrbitLayout(_ index: Int) -> Bool {
+        configuredAppearanceStyle(index) == .orbit && !isSearchingWithShortcut(index)
+    }
+
+    /// The style picked in Settings for this shortcut.
+    static func configuredAppearanceStyle(_ index: Int) -> AppearanceStylePreference {
         guard hasOverride("appearanceStyleOverride", index) else { return appearanceStyle }
         if index == 0 { return ProGatedPreferences.appearanceStyleOverride0.read() }
         return CachedUserDefaults.macroPref(indexToName("appearanceStyleOverride", index), AppearanceStylePreference.allCases)
+    }
+
+    private static func isSearchingWithShortcut(_ index: Int) -> Bool {
+        SwitcherSession.current?.shortcutIndex == index && TilesView.isSearchModeOn
     }
 
     static func effectiveAppearanceSize(_ index: Int) -> AppearanceSizePreference {
@@ -349,16 +367,21 @@ class Preferences {
         (0...maxShortcutCount).contains { effectivePreviewSelectedWindow($0) }
     }
 
-    /// Whether any shortcut's effective settings display window captures at all: the Thumbnails style
-    /// (tile screenshots) and/or the Preview overlay (whose instant first frame upscales the stored
+    /// Whether any shortcut's effective settings display window captures at all: the Thumbnails or Orbit
+    /// style (tile screenshots, or the hub's preview) and/or the Preview overlay (whose instant first frame upscales the stored
     /// thumbnail). When neither is configured, stored images would never be shown, so all capture work
     /// is skipped and no image RAM is held.
     static var anyShortcutShowsWindowCaptures: Bool {
-        anyShortcutUsesPreview || (0...maxShortcutCount).contains { effectiveAppearanceStyle($0) == .thumbnails }
+        anyShortcutUsesPreview || (0...maxShortcutCount).contains { showsWindowCaptures(configuredAppearanceStyle($0)) }
+    }
+
+    /// Thumbnails shows a capture on every tile, and Orbit shows the selected window's in its hub.
+    private static func showsWindowCaptures(_ style: AppearanceStylePreference) -> Bool {
+        style == .thumbnails || style == .orbit
     }
 
     /// Which Screen-Recording-dependent features any shortcut's effective settings rely on: the
-    /// Thumbnails appearance style (window screenshots) and/or the "preview selected window" overlay.
+    /// Thumbnails or Orbit appearance style (window screenshots) and/or the "preview selected window" overlay.
     /// These are the only features needing the permission, so when none are configured the menubar
     /// callout that nags about the missing permission is pointless and is suppressed (see #5623). The
     /// result also drives which feature(s) the callout names. We OR each flag across every shortcut
@@ -368,7 +391,7 @@ class Preferences {
         var usesThumbnails = false
         var usesPreviews = false
         for index in 0...maxShortcutCount {
-            usesThumbnails = usesThumbnails || effectiveAppearanceStyle(index) == .thumbnails
+            usesThumbnails = usesThumbnails || showsWindowCaptures(configuredAppearanceStyle(index))
             usesPreviews = usesPreviews || effectivePreviewSelectedWindow(index)
             if usesThumbnails && usesPreviews { break }
         }

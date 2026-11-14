@@ -100,6 +100,10 @@ class TileOverView: FlippedView {
     }
 
     func findTarget(_ location: NSPoint) -> TileView? {
+        if let orbit = TilesView.orbit {
+            let fromCenter = CGPoint(x: location.x - orbit.center.x, y: location.y - orbit.center.y)
+            return OrbitLayout.segmentIndex(at: fromCenter, orbit.result).map { orbit.tiles[$0] }
+        }
         guard let documentView = superview else { return nil }
         for case let view as TileView in documentView.subviews {
             let frame = view.frame

@@ -12,7 +12,12 @@ If you find AltTab useful, please support the original project at [alt-tab.app](
 
 ## What's different from the original
 
+<p align="center"><img src="docs/orbit.png" width="360" alt="The Orbit switcher: app icons on a ring of segments around a preview of the selected window"></p>
+
 - **Everything unlocked.** Search, extra shortcuts, the App Icons and Titles styles and auto-size all work, with no trial, license or upgrade screens.
+- **Orbit style, the new default.** The switcher is a round panel: one ring segment per open window, each showing its app icon, around a center that previews the selected window with its app name and title. Segments share the ring equally (2 windows take half each), and extra rings appear when one gets crowded. The selected segment lights up in your accent color. Left/right go around the ring; up/down move between rings. Searching switches to the Titles list, and the ring shrinks into the center and fans back out when you leave search. Pick another style any time in Settings → Appearance.
+- **Custom app icons look right.** AltTab trims a fixed border off app icons to fit Apple's icon grid, which used to cut into icons you replaced yourself in Finder. It now never trims past an icon's actual empty border.
+- **No updates.** The updater is removed, so the app never checks for, offers or installs the official build over yours.
 - **Spotlight-style search bar** in the switcher.
 - **Draggable switcher.** Drag it anywhere with the mouse; it remembers the spot.
 - **Spotlight or AltTab, never both.** Pressing ⌘-Space while the switcher is open closes the switcher and opens Spotlight; opening the switcher while Spotlight is up closes Spotlight.
@@ -65,35 +70,42 @@ The certificate now lives in your keychain. Delete the loose copies the script l
 rm codesign.conf codesign.crt codesign.key codesign.p12
 ```
 
-**4. Set the version number**
+**4. Create the local build settings**
 
-The app crashes at launch without this. The file is git-ignored.
+This file is git-ignored. It sets the version number (the app crashes at launch without it) and signs the release build with your local certificate instead of the original author's.
 
 ```sh
-echo 'CURRENT_PROJECT_VERSION = 11.10.1' > config/local.xcconfig
+cat > config/local.xcconfig <<'EOF'
+CURRENT_PROJECT_VERSION = 11.10.1
+CODE_SIGN_IDENTITY = Local Self-Signed
+OTHER_CODE_SIGN_FLAGS = --timestamp=none --deep --options runtime
+EOF
 ```
 
 **5. Build**
 
 ```sh
-bash ai/build.sh
+xcodebuild -project alt-tab-macos.xcodeproj -scheme Release -configuration Release -derivedDataPath DerivedData build
 ```
 
-The first build takes a few minutes. You can also open `alt-tab-macos.xcodeproj` in Xcode and press **⌘R**, but then the app lands in Xcode's own build folder rather than `DerivedData/`.
+This is the optimized build, the one to use day to day. The first build takes a few minutes. (`bash ai/build.sh` makes a developer build instead: slower, and it opens a floating "QA Menu" testing panel on every launch.)
 
 **6. Install**
 
 Quit the official AltTab if it's installed, then:
 
 ```sh
-cp -R DerivedData/Build/Products/Debug/AltTab.app /Applications/
+rm -rf /Applications/AltTab.app
+cp -R DerivedData/Build/Products/Release/AltTab.app /Applications/
 open /Applications/AltTab.app
 ```
 
 **7. First launch**
 
-- Grant **Accessibility** and **Screen Recording** when asked (System Settings → Privacy & Security). AltTab may restart afterwards.
-- In AltTab's settings, **turn off automatic updates**. Updates download the official build, which would replace yours.
+- Grant **Accessibility** and **Screen Recording** when asked (System Settings → Privacy & Security). AltTab may restart afterwards. Screen Recording is what lets the Orbit center preview the selected window; without it, the center shows the app icon.
+- If the original AltTab was installed before, check `~/Library/LaunchAgents` for a leftover `com.lwouis.alt-tab-macos.plist` and delete it. Otherwise both copies start at login, and two AltTab icons show up in the menu bar.
+
+Once installed, the app doesn't need Xcode. You can uninstall Xcode and reinstall it only when you want to rebuild.
 
 ## Using it
 
@@ -106,10 +118,10 @@ open /Applications/AltTab.app
 
 ```sh
 git pull
-bash ai/build.sh
+xcodebuild -project alt-tab-macos.xcodeproj -scheme Release -configuration Release -derivedDataPath DerivedData build
 ```
 
-Then quit AltTab and repeat the copy from step 6. Your permissions carry over, because the signing certificate stays the same.
+Then quit AltTab and repeat step 6. Your permissions carry over, because the signing certificate stays the same.
 
 ## License
 

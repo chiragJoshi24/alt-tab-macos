@@ -25,6 +25,9 @@ class TilesView {
     static var layoutCache = LayoutCache()
     static var thumbnailUnderLayer = TileUnderLayer()
     static var thumbnailOverView = TileOverView()
+    static let orbitView = OrbitView()
+    /// What the Orbit layout put on screen, with `tiles` in segment order; `nil` while any other layout is.
+    private(set) static var orbit: (result: OrbitLayout.Result, center: CGPoint, tiles: [TileView])?
     private static var initialized = false
 
     static func initialize() {
@@ -92,7 +95,9 @@ class TilesView {
         searchMode = .off
         clearHover()
         Windows.updateSearchQuery("")
+        restyleIfOrbitSearchToggled()
         App.refreshUi(true)
+        animateOrbitFanOutIfShown()
         takeTheCaretFromTheField(focusingSelectedTile: true)
     }
 
@@ -108,7 +113,11 @@ class TilesView {
                 SwitcherSession.current?.forceDoNothingOnRelease = true
                 clearHover()
                 stopKeyRepeatTimers()
+                let ring = orbitSnapshot()
+                let restyled = restyleIfOrbitSearchToggled()
                 App.refreshUi(true)
+                if restyled { popInSearchList() }
+                if let ring { OrbitCollapseWindow.play(ring) }
                 giveTheFieldTheCaret()
             default:
                 return
@@ -210,6 +219,32 @@ class TilesView {
         Windows.updateSearchQuery(query)
         stopKeyRepeatTimers()
         App.refreshUi(true)
+    }
+
+    /// Orbit renders as a ring outside search and as the Titles list inside it, so toggling search changes
+    /// the tile style mid-session. This is the restyle `App.buildUiAndShowPanel` runs on every summon.
+    @discardableResult
+    private static func restyleIfOrbitSearchToggled() -> Bool {
+        guard Preferences.configuredAppearanceStyle(SwitcherSession.activeShortcutIndex) == .orbit else { return false }
+        Appearance.update()
+        swapBackgroundViewIfNeeded()
+        updateCachedSizes()
+        TilesPanel.shared.updateAppearance()
+        return true
+    }
+
+    /// The ring has just collapsed into the search list: the list settles in from slightly smaller, so the
+    /// change reads as one motion rather than a cut.
+    private static func popInSearchList() {
+        guard let layer = scrollView.documentView?.layer else { return }
+        let size = scrollView.documentView!.bounds.size
+        let center = CGPoint(x: size.width / 2, y: min(size.height, scrollView.bounds.height) / 2)
+        OrbitView.animateSettle(layer, around: center)
+    }
+
+    static func animateOrbitFanOutIfShown() {
+        guard let orbit, let layer = scrollView.documentView?.layer else { return }
+        OrbitView.animateFanOut(layer, around: orbit.center)
     }
 
     private static func clearHover() {
@@ -391,6 +426,10 @@ class TilesView {
         view.indexInRecycledViews = indexInRecycledViews
         guard view.frame != .zero else { return }
         view.drawHighlight()
+        if let orbit {
+            highlightOrbit(orbit.tiles)
+            return
+        }
         let underLayer = TilesView.thumbnailUnderLayer
         let selectedIndex = SwitcherSession.current?.selectedIndex ?? 0
         guard selectedIndex >= 0, selectedIndex < recycledViews.count else { return }
@@ -400,6 +439,25 @@ class TilesView {
             focusedView: focusedView.frame != .zero ? focusedView : nil,
             hoveredView: hoveredView != focusedView && hoveredView?.frame != .zero ? hoveredView : nil
         )
+    }
+
+    private static func highlightOrbit(_ tiles: [TileView]) {
+        let session = SwitcherSession.current
+        let focused = orbitPosition(session?.selectedIndex, tiles)
+        let hovered = orbitPosition(session?.hoveredIndex, tiles)
+        orbitView.updateHighlight(focused: focused, hovered: hovered == focused ? nil : hovered)
+        orbitView.showWindow(Windows.selectedWindow())
+    }
+
+    /// Where the tile of `Windows.list[index]` sits on the ring.
+    private static func orbitPosition(_ index: Int?, _ tiles: [TileView]) -> Int? {
+        index.flatMap { $0 >= 0 && $0 < recycledViews.count ? tiles.firstIndex(of: recycledViews[$0]) : nil }
+    }
+
+    private static func orbitSnapshot() -> OrbitCollapseWindow.Snapshot? {
+        guard let orbit else { return nil }
+        return OrbitCollapseWindow.Snapshot(frame: TilesPanel.shared.frame, orbit, hubRadius: orbitHubRadius(),
+            focused: orbitPosition(SwitcherSession.current?.selectedIndex, orbit.tiles), selected: Windows.selectedWindow())
     }
 
     static func nextRow(_ direction: Direction, allowWrap: Bool = true) -> [TileView]? {
@@ -431,6 +489,10 @@ class TilesView {
     static func navigateUpOrDown(_ direction: Direction, allowWrap: Bool = true) {
         let selectedIndex = SwitcherSession.current?.selectedIndex ?? 0
         guard selectedIndex < TilesView.recycledViews.count else { return }
+        if let orbit {
+            navigateBetweenRings(orbit, from: TilesView.recycledViews[selectedIndex], direction, allowWrap)
+            return
+        }
         let focusedViewFrame = TilesView.recycledViews[selectedIndex].frame
         let originCenter = NSMidX(focusedViewFrame)
         guard let targetRow = nextRow(direction, allowWrap: allowWrap), !targetRow.isEmpty else { return }
@@ -449,7 +511,25 @@ class TilesView {
         }
     }
 
+    /// Up/down move to the ring inside or outside, onto the tile facing the current one.
+    private static func navigateBetweenRings(_ orbit: (result: OrbitLayout.Result, center: CGPoint, tiles: [TileView]),
+                                             from view: TileView, _ direction: Direction, _ allowWrap: Bool) {
+        guard let targetRow = nextRow(direction, allowWrap: allowWrap),
+              let current = orbit.tiles.firstIndex(of: view),
+              let ring = targetRow.first.flatMap({ orbit.tiles.firstIndex(of: $0) }).map({ orbit.result.segments[$0].ring }),
+              let target = OrbitLayout.nearestSegment(toAngle: orbit.result.segments[current].midAngle, inRing: ring, orbit.result),
+              let targetIndex = recycledViews.firstIndex(of: orbit.tiles[target]) else { return }
+        SwitcherSession.current?.performUserSelection {
+            Windows.updateSelectedAndHoveredWindowIndex(targetIndex)
+        }
+    }
+
     static func updateItemsAndLayout(_ preservedScrollOrigin: CGPoint?) {
+        guard !Preferences.usesOrbitLayout(SwitcherSession.activeShortcutIndex) else {
+            layoutOrbit()
+            return
+        }
+        leaveOrbitLayoutIfNeeded()
         var widthMax = TilesPanel.maxThumbnailsWidth().rounded()
         if Preferences.effectiveAppearanceSize(SwitcherSession.activeShortcutIndex) == .auto {
             resolveAutoSize(widthMax)
@@ -474,6 +554,93 @@ class TilesView {
             if let preservedScrollOrigin {
                 restoreScrollOrigin(preservedScrollOrigin)
             }
+        }
+    }
+
+    private static func leaveOrbitLayoutIfNeeded() {
+        guard orbit != nil else { return }
+        orbit = nil
+        contentView.updateAppearance()
+    }
+
+    private static func layoutOrbit() {
+        if Preferences.effectiveAppearanceSize(SwitcherSession.activeShortcutIndex) == .auto {
+            resolveOrbitAutoSize()
+        }
+        let filled = fillTiles(TileView.height(layoutCache.labelHeight))
+        guard !filled.aborted else { return }
+        let views = filled.tiles.map { $0.view }
+        let result = OrbitLayout.compute(orbitInput(views.count))
+        let side = ((result.outerRadius + Appearance.windowPadding) * 2).rounded()
+        let center = CGPoint(x: side / 2, y: side / 2)
+        for (position, view) in views.enumerated() {
+            placeOnSegment(view, result.segments[position], center)
+            Windows.list[filled.tiles[position].index].rowIndex = result.segments[position].ring
+        }
+        var ringStart = 0
+        rows = result.ringCounts.map { count in
+            defer { ringStart += count }
+            return Array(views[ringStart..<ringStart + count])
+        }
+        lastRowSignature.removeAll()
+        orbit = (result, center, views)
+        layoutOrbitParentViews(side, isEmpty: views.isEmpty)
+        orbitView.update(result, center: center, hubRadius: orbitHubRadius())
+        scrollView.documentView!.subviews = [orbitView] + views
+        scrollView.documentView!.addSubview(thumbnailOverView)
+        thumbnailOverView.scrollView = scrollView
+        thumbnailUnderLayer.updateHighlight(focusedView: nil, hoveredView: nil)
+        highlightStartView()
+        if views.isEmpty { orbitView.showWindow(nil) }
+    }
+
+    /// The app icon, not the tile, goes on the segment's middle: the tile also reserves room for a label
+    /// under the icon, which Orbit never shows.
+    private static func placeOnSegment(_ view: TileView, _ segment: OrbitLayout.Segment, _ center: CGPoint) {
+        let iconCenter = CGPoint(x: center.x + segment.center.x, y: center.y + segment.center.y)
+        view.frame.origin = CGPoint(x: (iconCenter.x - view.appIcon.frame.midX).rounded(), y: (iconCenter.y - view.appIcon.frame.midY).rounded())
+    }
+
+    private static func layoutOrbitParentViews(_ side: CGFloat, isEmpty: Bool) {
+        let size = NSSize(width: side, height: side)
+        TilesView.thumbnailsWidth = side
+        TilesView.thumbnailsHeight = side
+        contentView.frame.size = size
+        let host = contentView.hostView
+        if host !== contentView {
+            host.frame = CGRect(origin: .zero, size: size)
+        }
+        scrollView.frame = CGRect(origin: .zero, size: size)
+        scrollView.contentView.frame.size = size
+        scrollView.documentView!.frame.size = size
+        orbitView.frame = CGRect(origin: .zero, size: size)
+        thumbnailOverView.frame = CGRect(origin: .zero, size: size)
+        thumbnailUnderLayer.frame = CGRect(origin: .zero, size: size)
+        if searchField.superview != nil { searchField.removeFromSuperview() }
+        contentView.updateAppearance(cornerRadius: side / 2)
+        noWindowLabel.isHidden = !isEmpty
+        guard isEmpty else { return }
+        noWindowLabel.sizeToFit()
+        noWindowLabel.frame.origin = CGPoint(x: ((side - noWindowLabel.frame.width) / 2).rounded(), y: ((side - noWindowLabel.frame.height) / 2).rounded())
+    }
+
+    private static func orbitInput(_ count: Int) -> OrbitLayout.Input {
+        let icon = TileView.iconSize().width
+        return OrbitLayout.Input(count: count, iconSize: icon, hubRadius: orbitHubRadius(), ringThickness: (icon * 1.7).rounded(),
+            ringGap: 6, segmentGap: 6, iconSpacing: (icon * 0.45).rounded())
+    }
+
+    /// Big enough for the preview, the app name and two lines of title, whatever the icon size.
+    private static func orbitHubRadius() -> CGFloat {
+        max(110, (TileView.iconSize().width * 2.1).rounded())
+    }
+
+    private static func resolveOrbitAutoSize() {
+        let count = Windows.list.filter { Windows.shouldDisplay($0) }.count
+        _ = TileGridLayout.firstSizeThatFits([AppearanceSizePreference.large, .medium, .small], heightMax: TilesPanel.maxThumbnailsHeight()) { size in
+            Appearance.applySize(size)
+            Self.updateCachedSizes()
+            return (OrbitLayout.compute(orbitInput(count)).outerRadius + Appearance.windowPadding) * 2
         }
     }
 

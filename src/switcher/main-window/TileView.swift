@@ -14,6 +14,7 @@ class TileView: FlippedView {
     var dockLabelIcon = TileFontIconView(badgeSize: TileFontIconView.badgeBaseSize(forIconSize: TileView.iconSize().width))
     var windowlessAppIndicator = WindowlessAppIndicator(tooltip: TileView.noOpenWindowToolTip)
     private var fullTitle = ""
+    private var isOrbitFocused = false
     private var fullTitleWidth = CGFloat(0)
     private struct TruncationKey: Hashable {
         let title: String
@@ -89,6 +90,10 @@ class TileView: FlippedView {
     }
 
     func drawHighlight() {
+        if TilesView.orbit != nil {
+            drawOrbitHighlight()
+            return
+        }
         if Preferences.effectiveAppearanceStyle(SwitcherSession.activeShortcutIndex) == .appIcons {
             let session = SwitcherSession.current
             let isFocused = indexInRecycledViews == (session?.selectedIndex ?? 0)
@@ -106,6 +111,25 @@ class TileView: FlippedView {
             label.isHidden = !shouldBeVisible
             updateAppIconsLabel(isFocused: isFocused, isHovered: isHovered)
         }
+    }
+
+    /// Orbit names the selected window in its hub, so the label stays hidden; the focused icon grows instead.
+    /// It animates only when focus actually moves: a relayout resets the scale (see `applyCurrentStyle`),
+    /// and re-growing it then would make the icon pulse on every refresh.
+    private func drawOrbitHighlight() {
+        label.isHidden = true
+        let isFocused = indexInRecycledViews == (SwitcherSession.current?.selectedIndex ?? 0)
+        let target = isFocused ? CATransform3DMakeScale(1.14, 1.14, 1) : CATransform3DIdentity
+        if isFocused != isOrbitFocused {
+            let animation = CABasicAnimation(keyPath: "transform")
+            animation.fromValue = NSValue(caTransform3D: appIcon.presentation()?.transform ?? appIcon.transform)
+            animation.toValue = NSValue(caTransform3D: target)
+            animation.duration = 0.14
+            animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            appIcon.add(animation, forKey: "transform")
+        }
+        isOrbitFocused = isFocused
+        appIcon.transform = target
     }
 
     func updateDockLabelIcon(_ dockLabel: String?) {
@@ -214,6 +238,8 @@ class TileView: FlippedView {
     /// without forcing a full `TilesView.reset()` (which would recreate all 20 recycled tiles).
     func applyCurrentStyle() {
         let style = Preferences.effectiveAppearanceStyle(SwitcherSession.activeShortcutIndex)
+        // `frame` is undefined on a transformed layer, and the layout below reads and writes the icon's frame
+        appIcon.transform = CATransform3DIdentity
         thumbnail.isHidden = Appearance.hideThumbnails
         statusIcons.isHidden = style == .appIcons
         label.alignment = style == .appIcons ? .center : .natural

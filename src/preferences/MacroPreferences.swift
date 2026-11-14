@@ -308,12 +308,15 @@ enum AppearanceStylePreference: CaseIterable, ImageMacroPreference {
     case thumbnails
     case appIcons
     case titles
+    /// Last, so the indexes stored for the other three stay what they were.
+    case orbit
 
     var localizedString: LocalizedString {
         switch self {
             case .thumbnails: return NSLocalizedString("Thumbnails", comment: "")
             case .appIcons: return NSLocalizedString("App Icons", comment: "")
             case .titles: return NSLocalizedString("Titles", comment: "")
+            case .orbit: return NSLocalizedString("Orbit", comment: "")
         }
     }
 
@@ -324,6 +327,8 @@ enum AppearanceStylePreference: CaseIterable, ImageMacroPreference {
             case .thumbnails: return WidthHeightImage(width: width, height: height, name: "thumbnails")
             case .appIcons: return WidthHeightImage(width: width, height: height, name: "app_icons")
             case .titles: return WidthHeightImage(width: width, height: height, name: "titles")
+            // Orbit's tiles are App Icons tiles, so it shares their illustrations, customize sheet included.
+            case .orbit: return WidthHeightImage(width: width, height: height, name: "app_icons")
         }
     }
 }

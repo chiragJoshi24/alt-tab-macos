@@ -48,14 +48,14 @@ extension HardGateReason {
             // short-circuits before reaching `attemptHardGatedFeature`. Read the live preference
             // as the truthful fallback if it ever does fire.
             switch Preferences.appearanceStyle {
-            case .appIcons: return .appIconsStyle
+            case .appIcons, .orbit: return .appIconsStyle
             case .titles: return .titlesStyle
             case .thumbnails: return .nonEngaged
             }
         case let .proPreferences(appearanceStyle, shortcut):
             if shortcut { return .search }
             switch appearanceStyle {
-            case .appIcons: return .appIconsStyle
+            case .appIcons, .orbit: return .appIconsStyle
             case .titles: return .titlesStyle
             case .thumbnails, nil: return .nonEngaged
             }

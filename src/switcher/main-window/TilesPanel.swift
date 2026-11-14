@@ -227,6 +227,7 @@ class TilesPanel: NSPanel {
         // and Appearance are in their final state.
         alphaValue = 1
         makeKeyAndOrderFront(nil)
+        TilesView.animateOrbitFanOutIfShown()
         // The artificial key-repeat measures its initial-delay grace from when the panel could be SEEN, and this
         // is the only anchor for that which is guaranteed to exist — see `SwitcherSession.panelShownAt`. Set
         // once per summon (a re-show within one session must not restart the grace under the user's fingers).

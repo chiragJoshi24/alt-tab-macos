@@ -196,6 +196,7 @@
 "Only 1 shortcut" = "Only 1 shortcut";
 "Only on different screen" = "Only on different screen";
 "Open Trackpad Settings…" = "Open Trackpad Settings…";
+"Orbit" = "Orbit";
 "Order windows by" = "Order windows by";
 "Ordering & Grouping" = "Ordering & Grouping";
 "Overridden in Shortcut:" = "Overridden in Shortcut:";
@@ -324,6 +325,7 @@
 "Updates policy" = "Updates policy";
 "Usage" = "Usage";
 "Use App Icons" = "Use App Icons";
+"Use Orbit" = "Use Orbit";
 "Use Titles" = "Use Titles";
 "Version" = "Version";
 "View existing discussions" = "View existing discussions";

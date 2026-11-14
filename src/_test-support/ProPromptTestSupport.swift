@@ -41,7 +41,7 @@ extension App {
     static func resetPreferencesDependentComponents() {}
 }
 
-enum AppearanceStylePreference: CaseIterable { case thumbnails, appIcons, titles }
+enum AppearanceStylePreference: CaseIterable { case thumbnails, appIcons, titles, orbit }
 extension Preferences {
     static var appearanceStyle: AppearanceStylePreference { .thumbnails }
     static func effectiveAppearanceStyle(_ index: Int) -> AppearanceStylePreference { appearanceStyle }

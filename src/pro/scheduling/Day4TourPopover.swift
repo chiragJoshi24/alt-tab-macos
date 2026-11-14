@@ -77,6 +77,7 @@ class Day4TourPopover {
         case .thumbnails: return NSLocalizedString("Keep Thumbnails", comment: "")
         case .appIcons: return NSLocalizedString("Use App Icons", comment: "")
         case .titles: return NSLocalizedString("Use Titles", comment: "")
+        case .orbit: return NSLocalizedString("Use Orbit", comment: "")
         }
     }
 }
