@@ -571,7 +571,7 @@ class TilesView {
         guard !filled.aborted else { return }
         let views = filled.tiles.map { $0.view }
         let result = OrbitLayout.compute(orbitInput(views.count))
-        let side = ((result.outerRadius + Appearance.windowPadding) * 2).rounded()
+        let side = ((result.outerRadius + orbitRimGap) * 2).rounded()
         let center = CGPoint(x: side / 2, y: side / 2)
         for (position, view) in views.enumerated() {
             placeOnSegment(view, result.segments[position], center)
@@ -627,8 +627,15 @@ class TilesView {
     private static func orbitInput(_ count: Int) -> OrbitLayout.Input {
         let icon = TileView.iconSize().width
         return OrbitLayout.Input(count: count, iconSize: icon, hubRadius: orbitHubRadius(), ringThickness: (icon * 1.7).rounded(),
-            ringGap: 6, segmentGap: 6, iconSpacing: (icon * 0.45).rounded())
+            ringGap: orbitGap, segmentGap: orbitGap, iconSpacing: (icon * 0.45).rounded())
     }
+
+    /// One spacing for the gaps inside Orbit, so they read as even: between segments, between the hub and
+    /// the first ring, and between rings.
+    private static let orbitGap = CGFloat(12)
+    /// Between the last ring and the panel's rim: a little more than `orbitGap`, so the ring doesn't look
+    /// pressed against the edge.
+    private static let orbitRimGap = CGFloat(16)
 
     /// Big enough for the preview, the app name and two lines of title, whatever the icon size.
     private static func orbitHubRadius() -> CGFloat {
@@ -640,7 +647,7 @@ class TilesView {
         _ = TileGridLayout.firstSizeThatFits([AppearanceSizePreference.large, .medium, .small], heightMax: TilesPanel.maxThumbnailsHeight()) { size in
             Appearance.applySize(size)
             Self.updateCachedSizes()
-            return (OrbitLayout.compute(orbitInput(count)).outerRadius + Appearance.windowPadding) * 2
+            return (OrbitLayout.compute(orbitInput(count)).outerRadius + orbitRimGap) * 2
         }
     }
 

@@ -23,12 +23,15 @@ top, starting with ring 0 (the innermost).
 - **Rings are added only when the tiles don't fit in the ones before.** Once there are several, the tiles
   are spread across all of them in proportion to their capacities, by largest remainder. The counts always
   add up to the tile count, no ring is over capacity, and no ring is left empty.
-- **Segment 0 of each ring is centered on 12 o'clock.** The gap between neighbor segments is `segmentGap`
-  measured along the ring's middle circle, half of it taken from each side.
+- **Segment 0 of each ring is centered on 12 o'clock.** A segment's start and end angles are the lines
+  through the center that split the ring between neighbors.
+- **The gap between neighbor segments is a straight band of constant width**, `segmentGap`, not a wedge
+  pointing at the center. `OrbitView` draws each segment's straight edges parallel to the dividing line,
+  half the gap away from it, and rounds the segment's four corners.
 - **A lone tile takes the whole ring**, with no gap cut out of it.
 - **No tile** leaves only the hub: no segment, no ring, and the outer radius is the hub's.
-- **Hit-testing counts the gaps between segments as part of the nearest segment**, so the pointer never
-  falls through a hairline between two tiles. The hub, the gaps between rings, and anything beyond the last
+- **Hit-testing counts the gap between two segments as part of the nearest one**, so the pointer never
+  falls through it. The hub, the gaps between rings, and anything beyond the last
   ring hit nothing.
 - **Up/down moves between rings**, landing on the tile of the target ring whose middle is the closest to
   the current tile's middle, measured the short way around the circle (across 12 o'clock too).

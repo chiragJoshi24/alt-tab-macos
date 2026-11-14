@@ -16,16 +16,20 @@ enum OrbitLayout {
         var hubRadius: CGFloat
         var ringThickness: CGFloat
         var ringGap: CGFloat
-        /// The gap between two neighbor segments, measured along the ring's middle circle.
+        /// The width of the straight band of space between two neighbor segments.
         var segmentGap: CGFloat
         /// The least distance kept between two neighbor icons, measured along the ring's middle circle.
         var iconSpacing: CGFloat
     }
 
+    /// `startAngle` and `endAngle` are the lines through the center that split the ring between neighbors.
+    /// The shape drawn stays `gap / 2` away from each of them, so the space between two neighbors is a
+    /// straight band of constant width, not a wedge pointing at the center.
     struct Segment: Equatable {
         var ring: Int
         var startAngle: CGFloat
         var endAngle: CGFloat
+        var gap: CGFloat
         var innerRadius: CGFloat
         var outerRadius: CGFloat
 
@@ -71,8 +75,8 @@ enum OrbitLayout {
         return counts
     }
 
-    /// The tile under `point`, as an index into `result.segments`. The gaps between segments count as
-    /// part of the nearest one, so the pointer never falls through a hairline between two tiles.
+    /// The tile under `point`, as an index into `result.segments`. The gap between two segments counts as
+    /// part of the nearest one, so the pointer never falls through it.
     static func segmentIndex(at point: CGPoint, _ result: Result) -> Int? {
         let radius = hypot(point.x, point.y)
         let angle = self.angle(of: point)
@@ -128,10 +132,10 @@ enum OrbitLayout {
         let inner = innerRadius(ring, input)
         let outer = inner + input.ringThickness
         let span = 2 * CGFloat.pi / CGFloat(count)
-        let halfGap = count == 1 ? 0 : input.segmentGap / (inner + input.ringThickness / 2) / 2
+        let gap = count == 1 ? 0 : input.segmentGap
         return (0..<count).map { position in
             let start = CGFloat(position) * span - span / 2
-            return Segment(ring: ring, startAngle: start + halfGap, endAngle: start + span - halfGap, innerRadius: inner, outerRadius: outer)
+            return Segment(ring: ring, startAngle: start, endAngle: start + span, gap: gap, innerRadius: inner, outerRadius: outer)
         }
     }
 }

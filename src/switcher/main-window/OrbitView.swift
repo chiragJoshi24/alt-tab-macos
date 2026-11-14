@@ -226,14 +226,75 @@ class OrbitView: FlippedView {
         layer.add(animation, forKey: keyPath)
     }
 
+    private static let cornerRadius = CGFloat(6)
+
+    /// `OrbitLayout` angles start at 12 o'clock; CoreGraphics' start at 3 o'clock, hence the quarter turn.
+    /// A lone segment is the whole ring, with no corner to round.
     private static func path(_ segment: OrbitLayout.Segment, _ center: CGPoint) -> CGPath {
         let path = CGMutablePath()
         let start = segment.startAngle - .pi / 2
         let end = segment.endAngle - .pi / 2
-        path.addArc(center: center, radius: segment.outerRadius, startAngle: start, endAngle: end, clockwise: false)
-        path.addArc(center: center, radius: segment.innerRadius, startAngle: end, endAngle: start, clockwise: true)
+        guard segment.gap > 0 else {
+            path.addArc(center: center, radius: segment.outerRadius, startAngle: start, endAngle: end, clockwise: false)
+            path.addArc(center: center, radius: segment.innerRadius, startAngle: end, endAngle: start, clockwise: true)
+            path.closeSubpath()
+            return path
+        }
+        let radius = min(cornerRadius, (segment.outerRadius - segment.innerRadius) / 2 - 1)
+        let first = Corners(edgeAngle: start, side: 1, segment, radius)
+        let last = Corners(edgeAngle: end, side: -1, segment, radius)
+        let at = { (vector: CGPoint) in CGPoint(x: center.x + vector.x, y: center.y + vector.y) }
+        path.move(to: at(first.innerEdgePoint))
+        path.addLine(to: at(first.outerEdgePoint))
+        addFillet(path, at(first.outer), radius, from: first.towardEdge, to: angle(first.outer))
+        path.addArc(center: center, radius: segment.outerRadius, startAngle: angle(first.outer), endAngle: angle(last.outer), clockwise: false)
+        addFillet(path, at(last.outer), radius, from: angle(last.outer), to: last.towardEdge)
+        path.addLine(to: at(last.innerEdgePoint))
+        addFillet(path, at(last.inner), radius, from: last.towardEdge, to: angle(last.inner) + .pi)
+        path.addArc(center: center, radius: segment.innerRadius, startAngle: angle(last.inner), endAngle: angle(first.inner), clockwise: true)
+        addFillet(path, at(first.inner), radius, from: angle(first.inner) + .pi, to: first.towardEdge)
         path.closeSubpath()
         return path
+    }
+
+    /// The two rounded corners along one straight edge of a segment, relative to the hub's center. Each
+    /// corner is a circle of `radius` touching both the edge and the arc: its center is `radius` in from the
+    /// arc, and `gap / 2 + radius` from the dividing line, so the edge stays parallel to that line and the
+    /// gap stays a band of constant width.
+    private struct Corners {
+        let outer: CGPoint
+        let inner: CGPoint
+        let outerEdgePoint: CGPoint
+        let innerEdgePoint: CGPoint
+        /// From either corner's center, the direction of the point where it touches the edge.
+        let towardEdge: CGFloat
+
+        /// `side` is 1 for the edge the segment starts at, and -1 for the one it ends at, so the normal
+        /// always points into the segment.
+        init(edgeAngle: CGFloat, side: CGFloat, _ segment: OrbitLayout.Segment, _ radius: CGFloat) {
+            let along = CGPoint(x: cos(edgeAngle), y: sin(edgeAngle))
+            let normal = CGPoint(x: -sin(edgeAngle) * side, y: cos(edgeAngle) * side)
+            let offset = segment.gap / 2 + radius
+            let center = { (distance: CGFloat) -> CGPoint in
+                let length = (distance * distance - offset * offset).squareRoot()
+                return CGPoint(x: along.x * length + normal.x * offset, y: along.y * length + normal.y * offset)
+            }
+            outer = center(segment.outerRadius - radius)
+            inner = center(segment.innerRadius + radius)
+            outerEdgePoint = CGPoint(x: outer.x - normal.x * radius, y: outer.y - normal.y * radius)
+            innerEdgePoint = CGPoint(x: inner.x - normal.x * radius, y: inner.y - normal.y * radius)
+            towardEdge = atan2(-normal.y, -normal.x)
+        }
+    }
+
+    private static func angle(_ vector: CGPoint) -> CGFloat {
+        atan2(vector.y, vector.x)
+    }
+
+    /// The short way round, which a corner always is.
+    private static func addFillet(_ path: CGMutablePath, _ center: CGPoint, _ radius: CGFloat, from: CGFloat, to: CGFloat) {
+        let delta = (to - from).remainder(dividingBy: 2 * .pi)
+        path.addArc(center: center, radius: radius, startAngle: from, endAngle: from + delta, clockwise: delta < 0)
     }
 
     private static func scale(_ factor: CGFloat, around point: CGPoint) -> CATransform3D {

@@ -23,6 +23,7 @@ final class OrbitLayoutTests: XCTestCase {
         XCTAssertEqual(result.ringCounts, [1])
         let segment = result.segments[0]
         XCTAssertEqual(segment.endAngle - segment.startAngle, 2 * .pi, accuracy: 1e-9)
+        XCTAssertEqual(segment.gap, 0)
         XCTAssertEqual(segment.innerRadius, 110)
         XCTAssertEqual(segment.outerRadius, 190)
     }
@@ -32,8 +33,8 @@ final class OrbitLayoutTests: XCTestCase {
         XCTAssertEqual(result.ringCounts, [2])
         XCTAssertEqual(result.segments[0].midAngle, 0, accuracy: 1e-9)
         XCTAssertEqual(result.segments[1].midAngle, .pi, accuracy: 1e-9)
-        let gap = 6 / CGFloat(150)
-        XCTAssertEqual(result.segments[0].endAngle - result.segments[0].startAngle, .pi - gap, accuracy: 1e-9)
+        XCTAssertEqual(result.segments[0].endAngle - result.segments[0].startAngle, .pi, accuracy: 1e-9)
+        XCTAssertEqual(result.segments[0].gap, 6)
     }
 
     func testFirstTileSitsStraightAboveTheHub() {
